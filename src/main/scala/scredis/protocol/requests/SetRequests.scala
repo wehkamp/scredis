@@ -16,6 +16,7 @@ object SetRequests {
   object SInterStore extends Command("SINTERSTORE") with WriteCommand
   object SIsMember extends Command("SISMEMBER")
   object SMembers extends Command("SMEMBERS")
+  object SMIsMember extends Command("SMISMEMBER")
   object SMove extends Command("SMOVE") with WriteCommand
   object SPop extends Command("SPOP") with WriteCommand
   object SRandMember extends Command("SRANDMEMBER")
@@ -91,7 +92,19 @@ object SetRequests {
       }
     }
   }
-  
+
+  case class SMIsMember[W: Writer](key: String, members: W*)extends Request[Map[W, Boolean]](
+    SMIsMember, key +: members: _*
+  ) with Key {
+    override def decode = {
+      case a: ArrayResponse =>
+        val replies = a.parsed[Boolean, List] {
+          case i: IntegerResponse => i.toBoolean
+        }
+        members.zip(replies).toMap
+    }
+  }
+
   case class SMove[W: Writer](
     source: String, destination: String, member: W
   ) extends Request[Boolean](
